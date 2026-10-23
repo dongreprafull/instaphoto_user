@@ -6,10 +6,10 @@
 // sign the APK) must be added under Project settings → Your apps → Android
 // app, or Phone Auth verification will fail on real devices.
 export const firebaseConfig = {
-  apiKey: '',
-  authDomain: '',
-  projectId: '',
-  storageBucket: '',
-  messagingSenderId: '',
-  appId: '',
+  apiKey: 'AIzaSyD78k7BQZYrOQog3yOO4M5DjXby-51OB9c',
+  authDomain: 'instant-photo-5b19f.firebaseapp.com',
+  projectId: 'instant-photo-5b19f',
+  storageBucket: 'instant-photo-5b19f.firebasestorage.app',
+  messagingSenderId: '702224731523',
+  appId: '1:702224731523:web:17e2659b248bde12223ab6',
 }
