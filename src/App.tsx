@@ -1,22 +1,40 @@
 import { useState } from 'react'
+import Login from './screens/Login'
 import Home from './screens/Home'
 import Search from './screens/Search'
 import Payment from './screens/Payment'
 import Confirmed from './screens/Confirmed'
+import { getToken } from './lib/api'
 
-type Screen = 'home' | 'search' | 'payment' | 'confirmed'
+type Screen = 'login' | 'home' | 'search' | 'payment' | 'confirmed'
 
 export default function App() {
-  const [screen, setScreen] = useState<Screen>('home')
+  const [screen, setScreen] = useState<Screen>(getToken() ? 'home' : 'login')
+  const [bookingId, setBookingId] = useState<number | null>(null)
 
   return (
     <div className="phone-frame">
-      {screen === 'home' && <Home onFindPhotographer={() => setScreen('search')} />}
-      {screen === 'search' && (
-        <Search onBack={() => setScreen('home')} onCancel={() => setScreen('home')} onFound={() => setScreen('payment')} />
+      {screen === 'login' && <Login onLoggedIn={() => setScreen('home')} />}
+      {screen === 'home' && (
+        <Home
+          onBooked={(id) => {
+            setBookingId(id)
+            setScreen('search')
+          }}
+        />
       )}
-      {screen === 'payment' && <Payment onBack={() => setScreen('search')} onPay={() => setScreen('confirmed')} />}
-      {screen === 'confirmed' && <Confirmed onBackHome={() => setScreen('home')} />}
+      {screen === 'search' && bookingId && (
+        <Search
+          bookingId={bookingId}
+          onBack={() => setScreen('home')}
+          onCancel={() => setScreen('home')}
+          onFound={() => setScreen('payment')}
+        />
+      )}
+      {screen === 'payment' && bookingId && (
+        <Payment bookingId={bookingId} onBack={() => setScreen('search')} onPay={() => setScreen('confirmed')} />
+      )}
+      {screen === 'confirmed' && bookingId && <Confirmed bookingId={bookingId} onBackHome={() => setScreen('home')} />}
     </div>
   )
 }
