@@ -1,80 +1,51 @@
 import { useState, type CSSProperties } from 'react'
-import type { ConfirmationResult } from 'firebase/auth'
-import { sendOtp, isFirebaseConfigured } from '../lib/firebase'
-import { apiFetch, setSession, ApiError } from '../lib/api'
+import { apiFetch, setSession } from '../lib/api'
 import { CameraIcon } from './Icons'
 
-type Step = 'phone' | 'otp' | 'name'
+type Mode = 'login' | 'register'
 
 export default function Login({ onLoggedIn }: { onLoggedIn: () => void }) {
-  const [step, setStep] = useState<Step>('phone')
-  const [mobile, setMobile] = useState('')
-  const [otp, setOtp] = useState('')
+  const [mode, setMode] = useState<Mode>('login')
   const [name, setName] = useState('')
-  const [confirmation, setConfirmation] = useState<ConfirmationResult | null>(null)
-  const [idToken, setIdToken] = useState('')
+  const [mobile, setMobile] = useState('')
+  const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
-  async function handleSendOtp() {
+  async function handleLogin() {
     setError('')
     if (mobile.length !== 10) return setError('Enter a valid 10-digit mobile number.')
-    if (!isFirebaseConfigured()) {
-      return setError('Firebase is not configured in this build yet (src/lib/firebaseConfig.ts is empty).')
-    }
+    if (password.length < 6) return setError('Password must be at least 6 characters.')
     setLoading(true)
-    try {
-      const result = await sendOtp(mobile)
-      setConfirmation(result)
-      setStep('otp')
-    } catch (e: any) {
-      setError(e?.message || 'Could not send OTP. Try again.')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  async function handleVerifyOtp() {
-    setError('')
-    if (!confirmation || otp.length !== 6) return setError('Enter the 6-digit code.')
-    setLoading(true)
-    try {
-      const cred = await confirmation.confirm(otp)
-      const token = await cred.user.getIdToken()
-      setIdToken(token)
-      await loginWithToken(token)
-    } catch (e: any) {
-      setError(e?.message || 'Incorrect or expired OTP.')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  async function loginWithToken(token: string, nameOverride?: string) {
     try {
       const data = await apiFetch<{ token: string; user_id: number; name: string; mobile: string }>(
-        '/auth/firebase-login.php',
-        { method: 'POST', body: { id_token: token, purpose: 'user_login', name: nameOverride }, auth: false }
+        '/auth/login.php',
+        { method: 'POST', body: { mobile, password, purpose: 'user_login' }, auth: false }
       )
       setSession(data.token, { userId: data.user_id, name: data.name, mobile: data.mobile })
       onLoggedIn()
     } catch (e: any) {
-      if (e instanceof ApiError && e.status === 422) {
-        setStep('name')
-      } else {
-        setError(e?.message || 'Login failed.')
-      }
+      setError(e?.message || 'Login failed.')
+    } finally {
+      setLoading(false)
     }
   }
 
-  async function handleSubmitName() {
+  async function handleRegister() {
     setError('')
     if (name.trim() === '') return setError('Enter your name.')
+    if (mobile.length !== 10) return setError('Enter a valid 10-digit mobile number.')
+    if (password.length < 6) return setError('Password must be at least 6 characters.')
     setLoading(true)
     try {
-      await loginWithToken(idToken, name.trim())
+      const data = await apiFetch<{ token: string; user_id: number; name: string; mobile: string }>(
+        '/auth/user-register.php',
+        { method: 'POST', body: { name: name.trim(), mobile, password }, auth: false }
+      )
+      setSession(data.token, { userId: data.user_id, name: data.name, mobile: data.mobile })
+      onLoggedIn()
     } catch (e: any) {
-      setError(e?.message || 'Could not complete registration.')
+      setError(e?.message || 'Could not create account.')
     } finally {
       setLoading(false)
     }
@@ -82,7 +53,6 @@ export default function Login({ onLoggedIn }: { onLoggedIn: () => void }) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: 'var(--bg)' }}>
-      <div id="recaptcha-container" />
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 24, gap: 20 }}>
         <span
           style={{
@@ -95,46 +65,50 @@ export default function Login({ onLoggedIn }: { onLoggedIn: () => void }) {
         <div style={{ textAlign: 'center' }}>
           <h1 style={{ margin: '0 0 4px', fontSize: 22, fontWeight: 500 }}>Instant Photo</h1>
           <p style={{ margin: 0, fontSize: 13, color: 'var(--text-muted)' }}>
-            {step === 'phone' && 'Enter your mobile number to continue'}
-            {step === 'otp' && `Enter the code sent to +91 ${mobile}`}
-            {step === 'name' && "What's your name?"}
+            {mode === 'login' ? 'Log in with your mobile number' : 'Create an account to get started'}
           </p>
         </div>
 
         <div style={{ width: '100%', maxWidth: 320, display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {step === 'phone' && (
-            <input
-              inputMode="numeric"
-              placeholder="10-digit mobile number"
-              value={mobile}
-              onChange={(e) => setMobile(e.target.value.replace(/\D/g, '').slice(0, 10))}
-              style={inputStyle}
-            />
-          )}
-          {step === 'otp' && (
-            <input
-              inputMode="numeric"
-              placeholder="6-digit OTP"
-              value={otp}
-              onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-              style={inputStyle}
-            />
-          )}
-          {step === 'name' && (
+          {mode === 'register' && (
             <input placeholder="Full name" value={name} onChange={(e) => setName(e.target.value)} style={inputStyle} />
           )}
+          <input
+            inputMode="numeric"
+            placeholder="10-digit mobile number"
+            value={mobile}
+            onChange={(e) => setMobile(e.target.value.replace(/\D/g, '').slice(0, 10))}
+            style={inputStyle}
+          />
+          <input
+            type="password"
+            placeholder="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            style={inputStyle}
+          />
 
           {error && <div style={{ color: '#c0392b', fontSize: 12 }}>{error}</div>}
 
           <button
             disabled={loading}
-            onClick={step === 'phone' ? handleSendOtp : step === 'otp' ? handleVerifyOtp : handleSubmitName}
+            onClick={mode === 'login' ? handleLogin : handleRegister}
             style={{
               height: 48, background: 'var(--accent)', color: '#fff', borderRadius: 14,
               fontSize: 15, fontWeight: 500, opacity: loading ? 0.7 : 1,
             }}
           >
-            {loading ? 'Please wait…' : step === 'phone' ? 'Send OTP' : step === 'otp' ? 'Verify & continue' : 'Continue'}
+            {loading ? 'Please wait…' : mode === 'login' ? 'Log in' : 'Create account'}
+          </button>
+
+          <button
+            onClick={() => {
+              setError('')
+              setMode(mode === 'login' ? 'register' : 'login')
+            }}
+            style={{ background: 'none', border: 'none', fontSize: 13, color: 'var(--accent)', fontWeight: 500, padding: '4px 0' }}
+          >
+            {mode === 'login' ? "New here? Create an account" : 'Already have an account? Log in'}
           </button>
         </div>
       </div>
