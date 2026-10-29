@@ -38,6 +38,23 @@ jobs:
             npx cap add android
           fi
 
+      - name: Add location permissions to AndroidManifest.xml
+        run: |
+          python3 - <<'EOF'
+          path = "android/app/src/main/AndroidManifest.xml"
+          with open(path) as f:
+              content = f.read()
+          perms = [
+              '<uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />',
+              '<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />',
+          ]
+          for p in perms:
+              if p not in content:
+                  content = content.replace('<application', f'    {p}\n    <application', 1)
+          with open(path, 'w') as f:
+              f.write(content)
+          EOF
+
       - name: Sync web build into Android shell
         run: npx cap sync android
 
