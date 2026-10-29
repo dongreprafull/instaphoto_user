@@ -9,11 +9,14 @@ export default function Login({ onLoggedIn }: { onLoggedIn: () => void }) {
   const [name, setName] = useState('')
   const [mobile, setMobile] = useState('')
   const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [info, setInfo] = useState('')
 
   async function handleLogin() {
     setError('')
+    setInfo('')
     if (mobile.length !== 10) return setError('Enter a valid 10-digit mobile number.')
     if (password.length < 6) return setError('Password must be at least 6 characters.')
     setLoading(true)
@@ -31,11 +34,31 @@ export default function Login({ onLoggedIn }: { onLoggedIn: () => void }) {
     }
   }
 
+  async function handleForgotPassword() {
+    setError('')
+    setInfo('')
+    if (mobile.length !== 10) return setError('Enter your 10-digit mobile number above first.')
+    setLoading(true)
+    try {
+      const data = await apiFetch<{ message: string }>('/auth/forgot-password.php', {
+        method: 'POST',
+        body: { mobile, purpose: 'user_login' },
+        auth: false,
+      })
+      setInfo(data.message)
+    } catch (e: any) {
+      setError(e?.message || 'Could not send request.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   async function handleRegister() {
     setError('')
     if (name.trim() === '') return setError('Enter your name.')
     if (mobile.length !== 10) return setError('Enter a valid 10-digit mobile number.')
     if (password.length < 6) return setError('Password must be at least 6 characters.')
+    if (password !== confirmPassword) return setError('Passwords do not match.')
     setLoading(true)
     try {
       const data = await apiFetch<{ token: string; user_id: number; name: string; mobile: string }>(
@@ -87,8 +110,28 @@ export default function Login({ onLoggedIn }: { onLoggedIn: () => void }) {
             onChange={(e) => setPassword(e.target.value)}
             style={inputStyle}
           />
+          {mode === 'register' && (
+            <input
+              type="password"
+              placeholder="Confirm password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              style={inputStyle}
+            />
+          )}
+
+          {mode === 'login' && (
+            <button
+              onClick={handleForgotPassword}
+              disabled={loading}
+              style={{ background: 'none', border: 'none', fontSize: 12, color: 'var(--text-muted)', textAlign: 'right', padding: 0 }}
+            >
+              Forgot password?
+            </button>
+          )}
 
           {error && <div style={{ color: '#c0392b', fontSize: 12 }}>{error}</div>}
+          {info && <div style={{ color: 'var(--accent)', fontSize: 12 }}>{info}</div>}
 
           <button
             disabled={loading}
@@ -104,6 +147,8 @@ export default function Login({ onLoggedIn }: { onLoggedIn: () => void }) {
           <button
             onClick={() => {
               setError('')
+              setInfo('')
+              setConfirmPassword('')
               setMode(mode === 'login' ? 'register' : 'login')
             }}
             style={{ background: 'none', border: 'none', fontSize: 13, color: 'var(--accent)', fontWeight: 500, padding: '4px 0' }}
