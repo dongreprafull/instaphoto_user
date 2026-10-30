@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import { Geolocation } from '@capacitor/geolocation'
 import { apiFetch, getProfile } from '../lib/api'
+import { getCurrentLocation } from '../lib/location'
 import { CameraIcon, PinIcon, CheckIcon, SearchIcon } from './Icons'
 
 interface ApiPackage {
@@ -29,14 +29,14 @@ export default function Home({ onBooked }: { onBooked: (bookingId: number) => vo
     setError('')
     setLoading(true)
     try {
-      const pos = await Geolocation.getCurrentPosition()
+      const loc = await getCurrentLocation()
       const data = await apiFetch<{ booking_id: number; status: string }>('/bookings/create.php', {
         method: 'POST',
-        body: { package_id: pkg.id, lat: pos.coords.latitude, lng: pos.coords.longitude },
+        body: { package_id: pkg.id, lat: loc.lat, lng: loc.lng },
       })
       onBooked(data.booking_id)
     } catch (e: any) {
-      setError(e?.message || 'Could not start search. Make sure location access is allowed.')
+      setError(e?.message || 'Could not start search. Please try again.')
     } finally {
       setLoading(false)
     }
