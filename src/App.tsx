@@ -33,10 +33,15 @@ export default function App() {
         />
       )}
       {screen === 'tracking' && bookingId && (
-        <Tracking bookingId={bookingId} onPayNow={() => setScreen('payment')} />
+        <Tracking
+          bookingId={bookingId}
+          onPayNow={() => setScreen('payment')}
+          onDelivered={() => setScreen('confirmed')}
+          onCancelled={() => setScreen('home')}
+        />
       )}
       {screen === 'payment' && bookingId && (
-        <Payment bookingId={bookingId} onBack={() => setScreen('tracking')} onPay={() => setScreen('confirmed')} />
+        <Payment bookingId={bookingId} onBack={() => setScreen('tracking')} onPay={() => setScreen('tracking')} />
       )}
       {screen === 'confirmed' && bookingId && <Confirmed bookingId={bookingId} onBackHome={() => setScreen('home')} />}
     </div>

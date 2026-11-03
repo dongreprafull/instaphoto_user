@@ -2,8 +2,9 @@ import { Fragment, useEffect, useState } from 'react'
 import { MapContainer, Marker, TileLayer, useMap } from 'react-leaflet'
 import { divIcon } from 'leaflet'
 import { apiFetch } from '../lib/api'
-import { CheckIcon, PhoneIcon } from './Icons'
+import { CheckIcon, PhoneIcon, CancelIcon } from './Icons'
 import MapResizeFix from '../components/MapResizeFix'
+import CancelModal, { type CancelResult } from '../components/CancelModal'
 
 type Status = 'assigned' | 'on_the_way' | 'arrived' | 'completed'
 
@@ -34,6 +35,7 @@ interface BookingDetail {
   photographer_lat: string | number | null
   photographer_lng: string | number | null
   payment_status: 'created' | 'paid' | 'failed' | null
+  otp_verified_at: string | null
 }
 
 function FitBothMarkers({ a, b }: { a: [number, number]; b: [number, number] | null }) {
@@ -62,17 +64,29 @@ function MapMarker({ lat, lng, color, label }: { lat: number; lng: number; color
 export default function Tracking({
   bookingId,
   onPayNow,
+  onDelivered,
+  onCancelled,
 }: {
   bookingId: number
   onPayNow: () => void
+  onDelivered: () => void
+  onCancelled: () => void
 }) {
   const [booking, setBooking] = useState<BookingDetail | null>(null)
+  const [otp, setOtp] = useState<string | null>(null)
+  const [showCancel, setShowCancel] = useState(false)
+  const [cancelBusy, setCancelBusy] = useState(false)
+  const [cancelError, setCancelError] = useState('')
 
   useEffect(() => {
     let active = true
     const poll = () =>
       apiFetch<{ booking: BookingDetail }>(`/bookings/status.php?booking_id=${bookingId}`, { auth: false })
-        .then((data) => active && setBooking(data.booking))
+        .then((data) => {
+          if (!active) return
+          setBooking(data.booking)
+          if (data.booking.otp_verified_at) onDelivered()
+        })
         .catch(() => {})
     poll()
     const interval = setInterval(poll, 4000)
@@ -80,7 +94,38 @@ export default function Tracking({
       active = false
       clearInterval(interval)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bookingId])
+
+  // Once the session is completed and paid, fetch the delivery OTP to show
+  // the customer — this is a separate, authenticated endpoint, never part
+  // of the public status poll above.
+  useEffect(() => {
+    if (booking?.status !== 'completed' || booking.payment_status !== 'paid' || booking.otp_verified_at) return
+    let active = true
+    const fetchOtp = () =>
+      apiFetch<{ otp: string | null; verified: boolean }>(`/bookings/completion-otp.php?booking_id=${bookingId}`)
+        .then((data) => active && data.otp && setOtp(data.otp))
+        .catch(() => {})
+    fetchOtp()
+    const interval = setInterval(fetchOtp, 5000)
+    return () => {
+      active = false
+      clearInterval(interval)
+    }
+  }, [bookingId, booking?.status, booking?.payment_status, booking?.otp_verified_at])
+
+  async function handleCancel({ reason, reasonText }: CancelResult) {
+    setCancelBusy(true)
+    setCancelError('')
+    try {
+      await apiFetch('/bookings/cancel.php', { method: 'POST', body: { booking_id: bookingId, reason, reason_text: reasonText } })
+      onCancelled()
+    } catch (e: any) {
+      setCancelError(e?.message || 'Could not cancel booking.')
+      setCancelBusy(false)
+    }
+  }
 
   const currentIndex = booking ? STEPS.findIndex((s) => s.key === booking.status) : 0
   const userLat = booking ? Number(booking.user_lat) : null
@@ -88,6 +133,7 @@ export default function Tracking({
   const photographerLat = booking?.photographer_lat !== null && booking?.photographer_lat !== undefined ? Number(booking.photographer_lat) : null
   const photographerLng = booking?.photographer_lng !== null && booking?.photographer_lng !== undefined ? Number(booking.photographer_lng) : null
   const needsPayment = booking?.status === 'completed' && booking.payment_status !== 'paid'
+  const canCancel = booking && ['assigned', 'on_the_way', 'arrived'].includes(booking.status)
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: 'var(--bg)' }}>
@@ -126,7 +172,6 @@ export default function Tracking({
             </div>
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 14, fontWeight: 500 }}>{booking.photographer_name}</div>
-              <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{booking.photographer_mobile}</div>
             </div>
             <a
               href={booking.photographer_mobile ? `tel:${booking.photographer_mobile}` : undefined}
@@ -135,6 +180,16 @@ export default function Tracking({
               <PhoneIcon />
               Call
             </a>
+          </div>
+        )}
+
+        {otp && !booking?.otp_verified_at && (
+          <div style={{ background: 'var(--accent-bg)', border: '1px solid var(--accent-border)', borderRadius: 16, padding: 18, display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'center' }}>
+            <div style={{ fontSize: 12, color: 'var(--accent)', fontWeight: 500 }}>Your delivery OTP</div>
+            <div style={{ fontSize: 28, fontWeight: 600, letterSpacing: 4, color: 'var(--accent)' }}>{otp}</div>
+            <div style={{ fontSize: 12, color: 'var(--text-muted)', textAlign: 'center' }}>
+              Share this OTP with your photographer only after you've received the soft copy of your photos.
+            </div>
           </div>
         )}
 
@@ -160,6 +215,17 @@ export default function Tracking({
             ))}
           </div>
         </div>
+
+        {canCancel && (
+          <button
+            onClick={() => setShowCancel(true)}
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%', height: 46, background: 'var(--surface)', border: '1px solid #d7d5ce', borderRadius: 14, fontSize: 13, fontWeight: 500, color: '#c0392b' }}
+          >
+            <CancelIcon color="#c0392b" />
+            Cancel booking
+          </button>
+        )}
+        {cancelError && <div style={{ color: '#c0392b', fontSize: 13 }}>{cancelError}</div>}
       </div>
 
       {needsPayment && (
@@ -171,6 +237,10 @@ export default function Tracking({
             Session complete — Pay {booking ? `₹${parseFloat(booking.total_amount).toFixed(2)}` : ''} now
           </button>
         </div>
+      )}
+
+      {showCancel && (
+        <CancelModal title="Cancel this booking" onClose={() => setShowCancel(false)} onConfirm={handleCancel} busy={cancelBusy} />
       )}
     </div>
   )

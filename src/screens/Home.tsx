@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
 import { apiFetch, getProfile } from '../lib/api'
 import { getCurrentLocation } from '../lib/location'
-import { CameraIcon, PinIcon, CheckIcon, SearchIcon } from './Icons'
+import { CameraIcon, PinIcon, CheckIcon, SearchIcon, MailIcon } from './Icons'
+
+const DEFAULT_SUPPORT_EMAIL = 'support@instantphoto.in'
 
 interface ApiPackage {
   id: number
@@ -16,12 +18,19 @@ export default function Home({ onBooked }: { onBooked: (bookingId: number) => vo
   const [pkg, setPkg] = useState<ApiPackage | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [supportEmail, setSupportEmail] = useState(DEFAULT_SUPPORT_EMAIL)
   const profile = getProfile()
 
   useEffect(() => {
     apiFetch<{ packages: ApiPackage[] }>('/packages/list.php', { auth: false })
       .then((data) => setPkg(data.packages[0] ?? null))
       .catch(() => setError('Could not load packages. Check your connection.'))
+  }, [])
+
+  useEffect(() => {
+    apiFetch<{ support_email: string }>('/misc/support.php', { auth: false })
+      .then((data) => data.support_email && setSupportEmail(data.support_email))
+      .catch(() => {})
   }, [])
 
   async function handleFindPhotographer() {
@@ -104,6 +113,14 @@ export default function Home({ onBooked }: { onBooked: (bookingId: number) => vo
         </div>
 
         {error && <div style={{ color: '#c0392b', fontSize: 13 }}>{error}</div>}
+
+        <a
+          href={`mailto:${supportEmail}`}
+          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, fontSize: 12, color: 'var(--text-muted)', textDecoration: 'none', padding: '6px 0' }}
+        >
+          <MailIcon color="var(--text-muted)" />
+          Contact customer care
+        </a>
       </div>
 
       <div style={{ padding: '16px 24px 24px', background: 'var(--surface)', borderTop: '1px solid var(--border)' }}>

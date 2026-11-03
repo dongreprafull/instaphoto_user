@@ -23,9 +23,9 @@ export default function Confirmed({ bookingId, onBackHome }: { bookingId: number
         <div style={{ width: 72, height: 72, borderRadius: '50%', background: 'var(--success-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <CheckIcon color="var(--success)" size={34} />
         </div>
-        <div style={{ fontSize: 21, fontWeight: 500 }}>Payment successful</div>
+        <div style={{ fontSize: 21, fontWeight: 500 }}>Booking completed</div>
         <div style={{ fontSize: 13, color: 'var(--text-muted)', textAlign: 'center' }}>
-          Thanks for booking with Instant Photo{booking?.photographer_name ? ` and for choosing ${booking.photographer_name}` : ''}!
+          Payment received and delivery confirmed. Thanks for booking with Instant Photo{booking?.photographer_name ? ` and for choosing ${booking.photographer_name}` : ''}!
         </div>
 
         {booking && (
