@@ -5,9 +5,11 @@ import Search from './screens/Search'
 import Tracking from './screens/Tracking'
 import Payment from './screens/Payment'
 import Confirmed from './screens/Confirmed'
+import Profile from './screens/Profile'
+import MyBookings from './screens/MyBookings'
 import { getToken } from './lib/api'
 
-type Screen = 'login' | 'home' | 'search' | 'tracking' | 'payment' | 'confirmed'
+type Screen = 'login' | 'home' | 'search' | 'tracking' | 'payment' | 'confirmed' | 'profile' | 'myBookings'
 
 export default function App() {
   const [screen, setScreen] = useState<Screen>(getToken() ? 'home' : 'login')
@@ -22,8 +24,13 @@ export default function App() {
             setBookingId(id)
             setScreen('search')
           }}
+          onProfile={() => setScreen('profile')}
         />
       )}
+      {screen === 'profile' && (
+        <Profile onBack={() => setScreen('home')} onMyBookings={() => setScreen('myBookings')} onLogout={() => setScreen('login')} />
+      )}
+      {screen === 'myBookings' && <MyBookings onBack={() => setScreen('profile')} />}
       {screen === 'search' && bookingId && (
         <Search
           bookingId={bookingId}

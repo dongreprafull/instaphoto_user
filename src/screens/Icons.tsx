@@ -78,6 +78,25 @@ export function MailIcon({ color = 'currentColor' }: { color?: string }) {
   )
 }
 
+export function LogoutIcon({ color = 'currentColor' }: { color?: string }) {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+      <path d="M16 17l5-5-5-5" />
+      <path d="M21 12H9" />
+    </svg>
+  )
+}
+
+export function ProfileIcon({ color = 'currentColor' }: { color?: string }) {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <circle cx="12" cy="8" r="3.5" />
+      <path d="M4.5 20c1.5-3.8 5-5.5 7.5-5.5s6 1.7 7.5 5.5" />
+    </svg>
+  )
+}
+
 export function CardIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4338ca" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">

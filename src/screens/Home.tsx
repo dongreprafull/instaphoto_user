@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { apiFetch, getProfile } from '../lib/api'
 import { getCurrentLocation } from '../lib/location'
-import { CameraIcon, PinIcon, CheckIcon, SearchIcon, MailIcon } from './Icons'
+import { CameraIcon, PinIcon, CheckIcon, SearchIcon, MailIcon, ProfileIcon } from './Icons'
 
 const DEFAULT_SUPPORT_EMAIL = 'support@instantphoto.in'
 
@@ -14,7 +14,7 @@ interface ApiPackage {
   delivery_note: string
 }
 
-export default function Home({ onBooked }: { onBooked: (bookingId: number) => void }) {
+export default function Home({ onBooked, onProfile }: { onBooked: (bookingId: number) => void; onProfile: () => void }) {
   const [pkg, setPkg] = useState<ApiPackage | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -65,14 +65,23 @@ export default function Home({ onBooked }: { onBooked: (bookingId: number) => vo
           </span>
           <span style={{ fontSize: 17, fontWeight: 500 }}>Instant Photo</span>
         </div>
-        <div
-          style={{
-            display: 'flex', alignItems: 'center', gap: 6, background: 'var(--surface)',
-            border: '1px solid var(--border)', borderRadius: 999, padding: '6px 12px',
-          }}
-        >
-          <PinIcon color="var(--text-muted)" />
-          <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Current location</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div
+            style={{
+              display: 'flex', alignItems: 'center', gap: 6, background: 'var(--surface)',
+              border: '1px solid var(--border)', borderRadius: 999, padding: '6px 12px',
+            }}
+          >
+            <PinIcon color="var(--text-muted)" />
+            <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Current location</span>
+          </div>
+          <button
+            onClick={onProfile}
+            aria-label="Profile"
+            style={{ display: 'flex', width: 32, height: 32, alignItems: 'center', justifyContent: 'center', background: 'var(--accent-bg)', color: 'var(--accent)', border: '1px solid var(--accent-border)', borderRadius: '50%', flexShrink: 0 }}
+          >
+            <ProfileIcon color="var(--accent)" />
+          </button>
         </div>
       </div>
 
